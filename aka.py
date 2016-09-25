@@ -21,7 +21,7 @@
 #  Desc: A ZNC module to track users                                      #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-version = '2.0.0'
+version = '2.0.1'
 updated = "September 25, 2016"
 
 import znc
@@ -296,7 +296,7 @@ class aka(znc.Module):
                 os.rename(path, self.GetUser().GetUserPath() + "/networks/" + net.GetName() + "/moddata/aka/aka." + net.GetName() + ".db.old")
 
     def OnModCommand(self, command):
-        type = None
+        command = command.lower()
         cmds = ["all", "history", "channels", "sharedchans", "sharedusers", "seen", "geo", "process", "who", "rawquery", "stats", "about", "help", "migrate"]
         if command.split()[0] in cmds:
             if command.split()[0] == "all":

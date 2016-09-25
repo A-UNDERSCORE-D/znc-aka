@@ -1,5 +1,8 @@
 # Changelog
 
+### Version 2.0.1
+  * Make commands case-insensitive
+
 ### Verson 2.0.0
   * Efficieny and speed upgrades
   * Change from network to user level module
