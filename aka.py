@@ -21,8 +21,8 @@
 #  Desc: A ZNC module to track users                                      #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-version = '2.0.1'
-updated = "September 25, 2016"
+version = '2.0.2'
+updated = "September 28, 2016"
 
 import znc
 import os
@@ -100,7 +100,7 @@ class aka(znc.Module):
 
     def cmd_history(self, user):
         self.PutModule("Looking up \x02history\x02 for \x02{}\x02, please be patient...".format(user.lower()))
-        self.cur.execute("SELECT DISTINCT nick, host FROM users WHERE network = '{0}' AND (nick = '{1}' OR ident = '{1}' OR host = '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
+        self.cur.execute("SELECT DISTINCT nick, host FROM users WHERE network = '{0}' AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
         data = self.cur.fetchall()
         nicks = set(); idents = set(); hosts = set();
         if len(data) > 0:
@@ -134,9 +134,9 @@ class aka(znc.Module):
 
     def cmd_seen(self, user, channel):
         if channel:
-            self.cur.execute("SELECT nick, ident, host, channel, message, MAX(time) FROM users WHERE network = '{0}' AND message IS NOT NULL AND channel = '{1}' AND (nick = '{2}' OR ident = '{2}' OR host = '{2}');".format(self.GetNetwork().GetName().lower(), row[3].lower(), user.lower()))
+            self.cur.execute("SELECT nick, ident, host, channel, message, MAX(time) FROM users WHERE network = '{0}' AND message IS NOT NULL AND channel = '{1}' AND (nick GLOB '{2}' OR ident GLOB '{2}' OR host GLOB '{2}');".format(self.GetNetwork().GetName().lower(), channel.lower(), user.lower()))
         else:
-            self.cur.execute("SELECT nick, ident, host, channel, message, MAX(time) FROM users WHERE network = '{0}' AND message IS NOT NULL AND (nick = '{1}' OR ident = '{1}' OR host = '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
+            self.cur.execute("SELECT nick, ident, host, channel, message, MAX(time) FROM users WHERE network = '{0}' AND message IS NOT NULL AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
         data = self.cur.fetchall()
         try:
             for row in data:
@@ -148,7 +148,7 @@ class aka(znc.Module):
                 self.PutModule("\x02{}\x02 has \x02\x034not\x03\x02 been seen.".format(user.lower()))
 
     def cmd_channels(self, user):
-        self.cur.execute("SELECT DISTINCT channel FROM users WHERE network = '{0}' AND (nick = '{1}' OR ident = '{1}' OR host = '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
+        self.cur.execute("SELECT DISTINCT channel FROM users WHERE network = '{0}' AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
         data = self.cur.fetchall()
         chans = set()
         for row in data:
@@ -159,7 +159,7 @@ class aka(znc.Module):
         chan_lists = []
         for user in users:
             chans = []
-            self.cur.execute("SELECT DISTINCT channel FROM users WHERE network = '{0}' AND (nick = '{1}' OR ident = '{1}' OR host = '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
+            self.cur.execute("SELECT DISTINCT channel FROM users WHERE network = '{0}' AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
             data = self.cur.fetchall()
             for row in data:
                 chans.append(row[0])
@@ -173,7 +173,7 @@ class aka(znc.Module):
         nick_lists = []; ident_lists = []; host_lists = [];
         for channel in channels:
             nicks = []; idents = []; hosts = [];
-            self.cur.execute("SELECT DISTINCT nick, ident, host FROM users WHERE network = '{}' AND channel = '{}';".format(self.GetNetwork().GetName().lower(), row[3].lower()))
+            self.cur.execute("SELECT DISTINCT nick, ident, host FROM users WHERE network = '{}' AND channel = '{}';".format(self.GetNetwork().GetName().lower(), channel.lower()))
             data = self.cur.fetchall()
             for row in data:
                 nicks.append(row[0]); idents.append(row[1]); hosts.append(row[2]);
@@ -197,7 +197,7 @@ class aka(znc.Module):
         if (re.search(ipv6, str(user)) or re.search(ipv4, str(user)) or (re.search(rdns, str(user)) and '.' in str(user))):
             host = user
         else:
-            self.cur.execute("SELECT host, time FROM users WHERE network = '{0}' AND (nick = '{1}' OR ident = '{1}' OR host = '{1}') ORDER BY time DESC;".format(self.GetNetwork().GetName().lower(), user.lower()))
+            self.cur.execute("SELECT host, time FROM users WHERE network = '{0}' AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}') ORDER BY time DESC;".format(self.GetNetwork().GetName().lower(), user.lower()))
             data = self.cur.fetchall()
             for row in data:
                 if (re.search(ipv6, str(row[0])) or re.search(ipv4, str(row[0])) or (re.search(rdns, str(row[0])) and '.' in str(row[0]))):
@@ -383,7 +383,7 @@ class aka(znc.Module):
         help.AddRow()
         help.SetCell("Command", "sharedchans")
         help.SetCell("Arguments", "<user 1> <user 2> ... <user #>")
-        help.SetCell("Description", "Show common channels between a list of users (nicks, idents, or hosts, including mixed")
+        help.SetCell("Description", "Show common channels between a list of users (nicks, idents, or hosts, including mixed)")
         help.AddRow()
         help.SetCell("Command", "sharedusers")
         help.SetCell("Arguments", "<#channel 1> <#channel 2> ... <channel #>")
@@ -417,5 +417,9 @@ class aka(znc.Module):
         help.AddRow()
         help.SetCell("Command", "help")
         help.SetCell("Description", "Print help for using the module")
+        help.AddRow()
+        help.SetCell("Command", "NOTE")
+        help.SetCell("Arguments", "Wildcard Searches")
+        help.SetCell("Description", "<user> supports * and ? GLOB wildcard syntax (combinable at start, middle, and end).")
 
         self.PutModule(help)

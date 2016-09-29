@@ -55,6 +55,10 @@ To install aka, place aka.py in your ZNC modules folder
 
 `help` Print help from the module
 
+### Wildcard Searches
+
+All `<user>` searches support GLOB syntax. '*' will match any number of characters and '?' will match a single character. Can be combined and used at the start, middle, and end of the `<user>` block(s).
+
 ## Contact
 
 Issues/bugs should be submitted on the <a href="https://github.com/MuffinMedic/znc-aka/issues">GitHub issues page</a>.

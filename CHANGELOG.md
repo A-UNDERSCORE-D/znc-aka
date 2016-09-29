@@ -1,5 +1,8 @@
 # Changelog
 
+### Version 2.0.2
+  * Add support for `<user>` wildcard searches with GLOB syntax (? and *)
+
 ### Version 2.0.1
   * Make commands case-insensitive
 
