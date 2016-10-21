@@ -21,8 +21,8 @@
 #  Desc: A ZNC module to track users                                      #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-version = '2.0.2'
-updated = "September 28, 2016"
+version = '2.0.3'
+updated = "October 20, 2016"
 
 import znc
 import os
@@ -134,28 +134,27 @@ class aka(znc.Module):
 
     def cmd_seen(self, user, channel):
         if channel:
-            self.cur.execute("SELECT nick, ident, host, channel, message, MAX(time) FROM users WHERE network = '{0}' AND message IS NOT NULL AND channel = '{1}' AND (nick GLOB '{2}' OR ident GLOB '{2}' OR host GLOB '{2}');".format(self.GetNetwork().GetName().lower(), channel.lower(), user.lower()))
+            self.cur.execute("SELECT nick, ident, host, channel, message, MAX(time) FROM (SELECT * from users WHERE message IS NOT NULL) WHERE network = '{0}' AND channel = '{1}' AND (nick GLOB '{2}' OR ident GLOB '{2}' OR host GLOB '{2}');".format(self.GetNetwork().GetName().lower(), channel.lower(), user.lower()))
         else:
-            self.cur.execute("SELECT nick, ident, host, channel, message, MAX(time) FROM users WHERE network = '{0}' AND message IS NOT NULL AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
-        data = self.cur.fetchall()
+            self.cur.execute("SELECT nick, ident, host, channel, message, MAX(time) FROM (SELECT * from users WHERE message IS NOT NULL) WHERE network = '{0}' AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
+        data = self.cur.fetchone()
         try:
-            for row in data:
-                self.PutModule("\x02{}\x02 ({}@{}) was last seen in \x02{}\x02 at \x02{}\x02 saying \"\x02{}\x02\".".format(row[0], row[1], row[2], row[3], datetime.datetime.fromtimestamp(int(row[5])).strftime('%Y-%m-%d %H:%M:%S'), row[4]))
+            self.PutModule("\x02{}\x02 ({}@{}) was last seen in \x02{}\x02 at \x02{}\x02 saying \"\x02{}\x02\".".format(data[0], data[1], data[2],data[3], datetime.datetime.fromtimestamp(int(data[5])).strftime('%Y-%m-%d %H:%M:%S'), data[4]))
         except:
             if channel:
-                self.PutModule("\x02{}\x02 has \x02\x034not\x03\x02 been seen in \x02{}\x02.".format(user.lower(), row[3].lower()))
+                self.PutModule("\x02{}\x02 has \x02\x034not\x03\x02 been seen in \x02{}\x02.".format(user.lower(), channel.lower()))
             else:
                 self.PutModule("\x02{}\x02 has \x02\x034not\x03\x02 been seen.".format(user.lower()))
 
-    def cmd_channels(self, user):
-        self.cur.execute("SELECT DISTINCT channel FROM users WHERE network = '{0}' AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
+    def cmd_users(self, user):
+        self.cur.execute("SELECT DISTINCT nick, host, ident FROM users WHERE network = '{0}' AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
         data = self.cur.fetchall()
         chans = set()
         for row in data:
             chans.add(row[0])
         self.PutModule("\x02{}\x02 has been seen in \x02channels\x02: {}".format(user.lower(), ', '.join(sorted(chans))))
 
-    def cmd_shared_chans(self, users):
+    def cmd_channels(self, users):
         chan_lists = []
         for user in users:
             chans = []
@@ -167,9 +166,9 @@ class aka(znc.Module):
         shared_chans = set(chan_lists[0])
         for chan in chan_lists[1:]:
             shared_chans.intersection_update(chan)
-        self.PutModule("Shared \x02channels\x02 for \x02{}:\x02 {}".format(', '.join(users), ', '.join(sorted(shared_chans))))
+        self.PutModule("Common \x02channels\x02 for \x02{}:\x02 {}".format(', '.join(users), ', '.join(sorted(shared_chans))))
 
-    def cmd_shared_users(self, channels):
+    def cmd_users(self, channels):
         nick_lists = []; ident_lists = []; host_lists = [];
         for channel in channels:
             nicks = []; idents = []; hosts = [];
@@ -185,9 +184,12 @@ class aka(znc.Module):
             shared_idents.intersection_update(ident)
         for host in host_lists[1:]:
             shared_hosts.intersection_update(host)
-        self.PutModule("Shared \x02nicks\x02 for \x02{}:\x02 {}".format(', '.join(channels), ', '.join(sorted(shared_nicks))))
-        self.PutModule("Shared \x02idents\x02 for \x02{}:\x02 {}".format(', '.join(channels), ', '.join(sorted(shared_idents))))
-        self.PutModule("Shared \x02hosts\x02 for \x02{}:\x02 {}".format(', '.join(channels), ', '.join(sorted(shared_hosts))))
+        self.PutModule("Common \x02nicks\x02 for \x02{}:\x02 {}".format(', '.join(channels), ', '.join(sorted(shared_nicks))))
+        self.PutModule("Common \x02idents\x02 for \x02{}:\x02 {}".format(', '.join(channels), ', '.join(sorted(shared_idents))))
+        self.PutModule("Common \x02hosts\x02 for \x02{}:\x02 {}".format(', '.join(channels), ', '.join(sorted(shared_hosts))))
+
+    def cmd_compare_users(self, users):
+        self.PutModule("Users compared.")
 
     def cmd_geo(self, user):
         ipv4 = '(?:[0-9]{1,3}(\.|\-)){3}[0-9]{1,3}'
@@ -196,13 +198,15 @@ class aka(znc.Module):
         
         if (re.search(ipv6, str(user)) or re.search(ipv4, str(user)) or (re.search(rdns, str(user)) and '.' in str(user))):
             host = user
-        else:
-            self.cur.execute("SELECT host, time FROM users WHERE network = '{0}' AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}') ORDER BY time DESC;".format(self.GetNetwork().GetName().lower(), user.lower()))
-            data = self.cur.fetchall()
-            for row in data:
-                if (re.search(ipv6, str(row[0])) or re.search(ipv4, str(row[0])) or (re.search(rdns, str(row[0])) and '.' in str(row[0]))):
-                    host = row[0]
-                    break
+
+        self.cur.execute("SELECT host, nick, ident FROM users WHERE network = '{0}' AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}') ORDER BY time DESC;".format(self.GetNetwork().GetName().lower(), user.lower()))
+        data = self.cur.fetchall()
+        for row in data:
+            if (re.search(ipv6, str(row[0])) or re.search(ipv4, str(row[0])) or (re.search(rdns, str(row[0])) and '.' in str(row[0]))):
+                host = row[0]
+                nick = row[1]
+                ident = row[2]
+                break
         try:
             if re.search(ipv4, str(host)):
                 ip = re.sub('[^\w.]',".",((re.search(ipv4, str(host))).group(0)))
@@ -213,7 +217,11 @@ class aka(znc.Module):
             loc_json = loc.json()
 
             if loc_json["status"] != "fail":
-                self.PutModule("\x02{}\x02 is located in \x02{}, {}, {}\x02 ({}, {}) / Timezone: {} / Proxy: {} / Mobile: {} / IP: {} / rDNS: {}".format(user.lower(), loc_json["city"], loc_json["regionName"], loc_json["country"], loc_json["lat"], loc_json["lon"], loc_json["timezone"], loc_json["proxy"], loc_json["mobile"], loc_json["query"], loc_json["reverse"]))
+                try:
+                    user = "\x02{}\x02 ({}@{})".format(nick.lower(), ident.lower(), host.lower()) 
+                except:
+                    user = "\x02{}\x02 (no matching user)".format(user.lower())
+                self.PutModule("{} is located in \x02{}, {}, {}\x02 ({}, {}) / Timezone: {} / Proxy: {} / Mobile: {} / IP: {} / rDNS: {}".format(user, loc_json["city"], loc_json["regionName"], loc_json["country"], loc_json["lat"], loc_json["lon"], loc_json["timezone"], loc_json["proxy"], loc_json["mobile"], loc_json["query"], loc_json["reverse"]))
             else:
                 self.PutModule("\x02\x034Unable to geolocate\x03\x02 user \x02{}\x02. (Reason: {})".format(user.lower(), loc_json["message"]))
         except:
@@ -241,7 +249,7 @@ class aka(znc.Module):
                 self.PutIRC("WHO %s" % chan.GetName())
         else:
            self.PutIRC("WHO %s" % scope)
-        self.PutModule("{} updated from WHO. Please run \x02process\x02 to add these updates to the database".format(scope))
+        self.PutModule("{} WHO updates triggered. Please wait several minutes for ZNC to receive the updated data from the IRC server(s) and then run \x02process\x02 to add these updates to the database".format(scope))
 
     def cmd_about(self):
         self.PutModule("\x02aka\x02 (Also Known As / nickhistory) ZNC module by MuffinMedic (Evan)")
@@ -297,13 +305,13 @@ class aka(znc.Module):
 
     def OnModCommand(self, command):
         command = command.lower()
-        cmds = ["all", "history", "channels", "sharedchans", "sharedusers", "seen", "geo", "process", "who", "rawquery", "stats", "about", "help", "migrate"]
+        cmds = ["all", "history", "users", "channels", "sharedchans", "sharedusers", "seen", "geo", "process", "who", "rawquery", "stats", "about", "help", "migrate"]
         if command.split()[0] in cmds:
             if command.split()[0] == "all":
                 try:
                     self.PutModule("Getting \x02all\x02 for \x02{}\x02.".format(command.split()[1]))
                     self.cmd_history(command.split()[1])
-                    self.cmd_channels(command.split()[1])
+                    self.cmd_channels(command.split()[1:])
                     self.cmd_seen(command.split()[1], None)
                     self.cmd_geo(command.split()[1])
                     self.PutModule("All \x02complete\x02.")
@@ -314,20 +322,17 @@ class aka(znc.Module):
                     self.cmd_history(command.split()[1])
                 except:
                     self.PutModule("You must specify a user.")
-            elif command.split()[0] == "channels":
-                try:
-                    self.cmd_channels(command.split()[1])
-                except:
-                    self.PutModule("You must specify a user.")
-            elif command.split()[0] == "sharedchans" or command.split()[0] == "sharedusers":
-                try:
-                    if command.split()[2]:
-                        if command.split()[0] == 'sharedchans':
-                            self.cmd_shared_chans(command.split()[1:])
-                        elif command.split()[0] == 'sharedusers':
-                            self.cmd_shared_users(command.split()[1:])
-                except:
-                    self.PutModule("You must specify at least 2 users or channels.")
+            elif command.split()[0] == "users" or command.split()[0] == "channels" or command.split()[0] == "sharedchans" or command.split()[0] == "sharedusers":
+                    if command.split()[0] == 'channels' or command.split()[0] == 'sharedchans':
+                        try:
+                            self.cmd_channels(command.split()[1:])
+                        except:
+                            self.PutModule("You must specify at least one user.")
+                    elif command.split()[0] == 'users' or command.split()[0] == 'sharedusers':
+                        try:
+                            self.cmd_users(command.split()[1:])
+                        except:
+                            self.PutModule("You must specify at least one channel.")
             elif command.split()[0] == "seen":
                 try:
                     try:
@@ -377,17 +382,13 @@ class aka(znc.Module):
         help.SetCell("Arguments", "<user>")
         help.SetCell("Description", "Show history for a user")
         help.AddRow()
+        help.SetCell("Command", "users")
+        help.SetCell("Arguments", "<#channel 1> [<#channel 2>] ... [<channel #>]")
+        help.SetCell("Description", "Show common users between a list of channel(s)")
+        help.AddRow()
         help.SetCell("Command", "channels")
-        help.SetCell("Arguments", "<user>")
-        help.SetCell("Description", "Get all channels a user (nick, ident, or host) has been seen in")
-        help.AddRow()
-        help.SetCell("Command", "sharedchans")
-        help.SetCell("Arguments", "<user 1> <user 2> ... <user #>")
-        help.SetCell("Description", "Show common channels between a list of users (nicks, idents, or hosts, including mixed)")
-        help.AddRow()
-        help.SetCell("Command", "sharedusers")
-        help.SetCell("Arguments", "<#channel 1> <#channel 2> ... <channel #>")
-        help.SetCell("Description", "Show common users between a list of channels")
+        help.SetCell("Arguments", "<user 1> [<user 2>] ... [<user #>]")
+        help.SetCell("Description", "Show common channels between a list of user(s) (nicks, idents, or hosts, including mixed)")
         help.AddRow()
         help.SetCell("Command", "seen")
         help.SetCell("Arguments", "<user> [<#channel>]")

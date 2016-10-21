@@ -25,7 +25,7 @@ If you agree to this update, please note that on first load, AKA will need to co
 To install aka, place aka.py in your ZNC modules folder
 
 ## Loading
-`/msg *status loadmod aka`
+`/znc loadmod aka`
 
 ## Commands
 
@@ -33,11 +33,9 @@ To install aka, place aka.py in your ZNC modules folder
 
 `history <user>` Show history for a user (nick, ident, or host)
 
-`channels <user>` Get all channels a user (nick, ident, or host) has been seen in
+`users <#channel 1> [<#channel 2>] ... [<#channel #>]` Show common users between a list of channels
 
-`sharedchans <user 1> <user 2> ... <user #>` Show common channels between a list of users (nicks, idents, and/or hosts)
-
-`sharedusers <#channel 1> <#channel 2> ... <#channel #>` Show common users between a list of channels
+`channels <user 1> [<user 2>] ... [<user #>]` Show common channels between a list of users (nicks, idents, and/or hosts)
 
 `seen <user> [<#channel>]` Display last time user (nick, ident, or host) was seen speaking
 

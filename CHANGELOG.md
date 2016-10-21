@@ -1,5 +1,11 @@
 # Changelog
 
+### Version 2.0.3
+  * Improved `geo` output
+  * Rename `sharedusers` and `sharedchans` to `users` and `channels` to accept one to many arguments
+  * Improved performance of `seen` command
+  * Fix incorrect `seen` results when user not seen in specified channel
+
 ### Version 2.0.2
   * Add support for `<user>` wildcard searches with GLOB syntax (? and *)
 
