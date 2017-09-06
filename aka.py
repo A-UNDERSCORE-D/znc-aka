@@ -402,11 +402,13 @@ class aka(znc.Module):
                 self.PutModule("All \x02complete\x02.")
             else:
                 self.PutModule("You must specify a user.")
+
         elif top_command == "history":
             if len(split_command) >= 2:
                 self.cmd_history(split_command[1])
             else:
                 self.PutModule("You must specify a user.")
+
         elif top_command in ("users", "channels", "sharedchans","sharedusers"):
                 if top_command == 'channels' or top_command == 'sharedchans':
                     if len(split_command) >= 2:
@@ -418,6 +420,7 @@ class aka(znc.Module):
                         self.cmd_users(split_command[1:])
                     else:
                         self.PutModule("You must specify at least one channel.")
+
         elif top_command == "seen":
             if len(split_command) >= 2:
                 if len(split_command) >= 3:
@@ -426,11 +429,13 @@ class aka(znc.Module):
                     self.cmd_seen(split_command[1], None)
             else:
                 self.PutModule("You must specify a user and optional channel.")
+
         elif top_command == "geo":
             if len(split_command) >= 2:
                 self.cmd_geo(split_command[1])
             else:
                 self.PutModule("You must specify a user.")
+
         elif top_command == "process" or top_command == "who":
             if len(split_command) >= 2:
                 if top_command == "process":
@@ -439,17 +444,22 @@ class aka(znc.Module):
                     self.cmd_who(split_command[1])
             else:
                 self.PutModule("Valid options: #channel, network, all")
+
         elif top_command == "rawquery":
             if len(split_command) >= 2:
                 self.cmd_rawquery(split_command[1:])
             else:
                 self.PutModule("You must specify a query.")
+
         elif top_command == "stats":
             self.cmd_stats()
+
         elif top_command == "about":
             self.cmd_about()
+
         elif top_command == "help":
             self.cmd_help()
+
         else:
             self.PutModule("Invalid command. See \x02help\x02 for a list of available commands.")
 
