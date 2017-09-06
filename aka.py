@@ -48,32 +48,40 @@ class aka(znc.Module):
         return True
 
     def OnJoin(self, user, channel):
-        self.process_user(self.GetNetwork().GetName(), user.GetNick(), user.GetIdent(), user.GetHost(), channel.GetName())
+        self.process_user(self.GetNetwork().GetName(), user.GetNick(), user.GetIdent(), user.GetHost(),
+                          channel.GetName())
 
     def OnNick(self, user, new_nick, channels):
         for chan in channels:
             self.process_user(self.GetNetwork().GetName(), new_nick, user.GetIdent(), user.GetHost(), chan.GetName())
 
     def OnPrivMsg(self, user, message):
-        self.process_seen(self.GetNetwork().GetName(), user.GetNick(), user.GetIdent(), user.GetHost(), 'PRIVMSG', message)
+        self.process_seen(self.GetNetwork().GetName(), user.GetNick(), user.GetIdent(), user.GetHost(), 'PRIVMSG',
+                          message)
 
     def OnChanMsg(self, user, channel, message):
-        self.process_seen(self.GetNetwork().GetName(), user.GetNick(), user.GetIdent(), user.GetHost(), channel.GetName(), message)
+        self.process_seen(self.GetNetwork().GetName(), user.GetNick(), user.GetIdent(), user.GetHost(),
+                          channel.GetName(), message)
 
     def OnChanAction(self, user, channel, message):
-        message = "* " + str(message).replace("'","''")
-        self.process_seen(self.GetNetwork().GetName(), user.GetNick(), user.GetIdent(), user.GetHost(), channel.GetName(), message)
+        message = "* " + str(message).replace("'", "''")
+        self.process_seen(self.GetNetwork().GetName(), user.GetNick(), user.GetIdent(), user.GetHost(),
+                          channel.GetName(), message)
 
     def OnUserJoin(self, channel, key):
         self.PutIRC("WHO %s" % channel)
 
     def process_user(self, network, nick, ident, host, channel):
-        self.cur.execute("INSERT OR IGNORE INTO users (network, nick, ident, host, channel, time) VALUES (?, ?, ?, ?, ?, strftime('%s', 'now'));", (network.lower(), nick.lower(), ident.lower(), host.lower(), channel.lower()))
+        self.cur.execute("INSERT OR IGNORE INTO users (network, nick, ident, host, channel, time) VALUES "
+                         "(?, ?, ?, ?, ?, strftime('%s', 'now'));",
+                         (network.lower(), nick.lower(), ident.lower(), host.lower(), channel.lower()))
         self.conn.commit()
 
     def process_seen(self, network, nick, ident, host, channel, message):
-        message = str(message).replace("'","''")
-        self.cur.execute("INSERT OR REPLACE INTO users (network, nick, ident, host, channel, message, time) VALUES (?, ?, ?, ?, ?, ?, strftime('%s', 'now'));", (network.lower(), nick.lower(), ident.lower(), host.lower(), channel.lower(), message))
+        message = str(message).replace("'", "''")
+        self.cur.execute("INSERT OR REPLACE INTO users (network, nick, ident, host, channel, message, time) "
+                         "VALUES (?, ?, ?, ?, ?, ?, strftime('%s', 'now'));",
+                         (network.lower(), nick.lower(), ident.lower(), host.lower(), channel.lower(), message))
         self.conn.commit()
 
     def cmd_process(self, scope):
@@ -85,22 +93,27 @@ class aka(znc.Module):
                 for chan in chans:
                     nicks = chan.GetNicks()
                     for nick in nicks.items():
-                        self.process_user(net.GetName(), nick[1].GetNick(), nick[1].GetIdent(), nick[1].GetHost(), chan.GetName())
+                        self.process_user(net.GetName(), nick[1].GetNick(), nick[1].GetIdent(), nick[1].GetHost(),
+                                          chan.GetName())
         elif scope == 'network':
             chans = self.GetNetwork().GetChans()
             for chan in chans:
                 nicks = chan.GetNicks()
                 for nick in nicks.items():
-                    self.process_user(self.GetNetwork().GetName(), nick[1].GetNick(), nick[1].GetIdent(), nick[1].GetHost(), chan.GetName())
+                    self.process_user(self.GetNetwork().GetName(), nick[1].GetNick(), nick[1].GetIdent(),
+                                      nick[1].GetHost(), chan.GetName())
         else:
             nicks = self.GetNetwork().FindChan(scope).GetNicks()
             for nick in nicks.items():
-                self.process_user(self.GetNetwork().GetName(), nick[1].GetNick(), nick[1].GetIdent(), nick[1].GetHost(), scope)
+                self.process_user(self.GetNetwork().GetName(), nick[1].GetNick(), nick[1].GetIdent(), nick[1].GetHost(),
+                                  scope)
         self.PutModule("{} processed.".format(scope))
 
     def cmd_history(self, user):
         self.PutModule("Looking up \x02history\x02 for \x02{}\x02, please be patient...".format(user.lower()))
-        self.cur.execute("SELECT DISTINCT nick, host FROM users WHERE network = '{0}' AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
+        self.cur.execute("SELECT DISTINCT nick, host FROM users WHERE network = '{0}' AND "
+                         "(nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(
+                          self.GetNetwork().GetName().lower(), user.lower()))
         data = self.cur.fetchall()
         nicks, idents, hosts = set(), set(), set()
         if len(data) > 0:
@@ -108,7 +121,8 @@ class aka(znc.Module):
                 nicks.add("nick = '" + row[0] + "' OR")
                 hosts.add("host = '" + row[1] + "' OR")
 
-            self.cur.execute("SELECT DISTINCT nick, ident, host FROM users WHERE network = '{}' AND ({} {})".format(self.GetNetwork().GetName().lower(), ' '.join(nicks), ' '.join(hosts)[:-3]))
+            self.cur.execute("SELECT DISTINCT nick, ident, host FROM users WHERE network = '{}' AND ({} {})".format(
+                self.GetNetwork().GetName().lower(), ' '.join(nicks), ' '.join(hosts)[:-3]))
             data = self.cur.fetchall()
             nicks.clear()
             hosts.clear()
@@ -140,21 +154,32 @@ class aka(znc.Module):
 
     def cmd_seen(self, user, channel):
         if channel:
-            self.cur.execute("SELECT nick, ident, host, channel, message, MAX(time) FROM (SELECT * from users WHERE message IS NOT NULL) WHERE network = '{0}' AND channel = '{1}' AND (nick GLOB '{2}' OR ident GLOB '{2}' OR host GLOB '{2}');".format(self.GetNetwork().GetName().lower(), channel.lower(), user.lower()))
+            self.cur.execute("SELECT nick, ident, host, channel, message, MAX(time) FROM (SELECT * from users "
+                             "WHERE message IS NOT NULL) WHERE network = '{0}' AND channel = '{1}' AND "
+                             "(nick GLOB '{2}' OR ident GLOB '{2}' OR host GLOB '{2}');".format(
+                              self.GetNetwork().GetName().lower(), channel.lower(), user.lower()))
         else:
-            self.cur.execute("SELECT nick, ident, host, channel, message, MAX(time) FROM (SELECT * from users WHERE message IS NOT NULL) WHERE network = '{0}' AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
+            self.cur.execute("SELECT nick, ident, host, channel, message, MAX(time) FROM "
+                             "(SELECT * from users WHERE message IS NOT NULL) WHERE network = '{0}' AND "
+                             "(nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(
+                              self.GetNetwork().GetName().lower(), user.lower()))
         data = self.cur.fetchone()
 
         if len(data) >= 6:
-            self.PutModule("\x02{}\x02 ({}@{}) was last seen in \x02{}\x02 at \x02{}\x02 saying \"\x02{}\x02\".".format(data[0], data[1], data[2],data[3], datetime.datetime.fromtimestamp(int(data[5])).strftime('%Y-%m-%d %H:%M:%S'), data[4]))
+            self.PutModule("\x02{}\x02 ({}@{}) was last seen in \x02{}\x02 at \x02{}\x02 saying \"\x02{}\x02\".".format(
+                data[0], data[1], data[2], data[3],
+                datetime.datetime.fromtimestamp(int(data[5])).strftime('%Y-%m-%d %H:%M:%S'), data[4]))
         else:
             if channel:
-                self.PutModule("\x02{}\x02 has \x02\x034not\x03\x02 been seen in \x02{}\x02.".format(user.lower(), channel.lower()))
+                self.PutModule("\x02{}\x02 has \x02\x034not\x03\x02 been seen in \x02{}\x02.".format(user.lower(),
+                                                                                                     channel.lower()))
             else:
                 self.PutModule("\x02{}\x02 has \x02\x034not\x03\x02 been seen.".format(user.lower()))
 
     def cmd_users(self, user):
-        self.cur.execute("SELECT DISTINCT nick, host, ident FROM users WHERE network = '{0}' AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
+        self.cur.execute("SELECT DISTINCT nick, host, ident FROM users WHERE network = '{0}' AND "
+                         "(nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(
+                          self.GetNetwork().GetName().lower(), user.lower()))
         data = self.cur.fetchall()
         chans = set()
         for row in data:
@@ -165,7 +190,9 @@ class aka(znc.Module):
         chan_lists = []
         for user in users:
             chans = []
-            self.cur.execute("SELECT DISTINCT channel FROM users WHERE network = '{0}' AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
+            self.cur.execute("SELECT DISTINCT channel FROM users WHERE network = '{0}' AND "
+                             "(nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(
+                              self.GetNetwork().GetName().lower(), user.lower()))
             data = self.cur.fetchall()
             for row in data:
                 chans.append(row[0])
@@ -173,13 +200,15 @@ class aka(znc.Module):
         shared_chans = set(chan_lists[0])
         for chan in chan_lists[1:]:
             shared_chans.intersection_update(chan)
-        self.PutModule("Common \x02channels\x02 for \x02{}:\x02 {}".format(', '.join(users), ', '.join(sorted(shared_chans))))
+        self.PutModule("Common \x02channels\x02 for \x02{}:\x02 {}".format(
+            ', '.join(users), ', '.join(sorted(shared_chans))))
 
     def cmd_users(self, channels):
         nick_lists, ident_lists, host_lists = [], [], []
         for channel in channels:
             nicks, idents, hosts = [], [], []
-            self.cur.execute("SELECT DISTINCT nick, ident, host FROM users WHERE network = '{}' AND channel = '{}';".format(self.GetNetwork().GetName().lower(), channel.lower()))
+            self.cur.execute("SELECT DISTINCT nick, ident, host FROM users WHERE network = '{}' AND "
+                             "channel = '{}';".format(self.GetNetwork().GetName().lower(), channel.lower()))
             data = self.cur.fetchall()
             for row in data:
                 nicks.append(row[0])
@@ -197,9 +226,14 @@ class aka(znc.Module):
             shared_idents.intersection_update(ident)
         for host in host_lists[1:]:
             shared_hosts.intersection_update(host)
-        self.PutModule("Common \x02nicks\x02 for \x02{}:\x02 {}".format(', '.join(channels), ', '.join(sorted(shared_nicks))))
-        self.PutModule("Common \x02idents\x02 for \x02{}:\x02 {}".format(', '.join(channels), ', '.join(sorted(shared_idents))))
-        self.PutModule("Common \x02hosts\x02 for \x02{}:\x02 {}".format(', '.join(channels), ', '.join(sorted(shared_hosts))))
+
+        nicks_str = ', '.join(sorted(shared_nicks))
+        idents_str = ', '.join(sorted(shared_idents))
+        host_str = ', '.join(sorted(shared_hosts))
+        channels_str = ', '.join(channels)
+        self.PutModule("Common \x02nicks\x02 for \x02{}:\x02 {}".format(channels_str, nicks_str))
+        self.PutModule("Common \x02idents\x02 for \x02{}:\x02 {}".format(channels_str, idents_str))
+        self.PutModule("Common \x02hosts\x02 for \x02{}:\x02 {}".format(channels_str, host_str))
 
     def cmd_compare_users(self, users):
         self.PutModule("Users compared.")
@@ -209,13 +243,17 @@ class aka(znc.Module):
         ipv6 = '^((?:[0-9A-Fa-f]{1,4}))((?::[0-9A-Fa-f]{1,4}))*::((?:[0-9A-Fa-f]{1,4}))((?::[0-9A-Fa-f]{1,4}))*|((?:[0-9A-Fa-f]{1,4}))((?::[0-9A-Fa-f]{1,4})){7}$'
         rdns = '^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])$'
         
-        if (re.search(ipv6, str(user)) or re.search(ipv4, str(user)) or (re.search(rdns, str(user)) and '.' in str(user))):
+        if (re.search(ipv6, str(user)) or re.search(ipv4, str(user)) or
+                (re.search(rdns, str(user)) and '.' in str(user))):
             host = user
 
-        self.cur.execute("SELECT host, nick, ident FROM users WHERE network = '{0}' AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}') ORDER BY time DESC;".format(self.GetNetwork().GetName().lower(), user.lower()))
+        self.cur.execute("SELECT host, nick, ident FROM users WHERE network = '{0}' AND (nick GLOB '{1}' OR "
+                         "ident GLOB '{1}' OR host GLOB '{1}') ORDER BY time DESC;".format(
+                          self.GetNetwork().GetName().lower(), user.lower()))
         data = self.cur.fetchall()
         for row in data:
-            if (re.search(ipv6, str(row[0])) or re.search(ipv4, str(row[0])) or (re.search(rdns, str(row[0])) and '.' in str(row[0]))):
+            if (re.search(ipv6, str(row[0])) or re.search(ipv4, str(row[0])) or
+                    (re.search(rdns, str(row[0])) and '.' in str(row[0]))):
                 host = row[0]
                 nick = row[1]
                 ident = row[2]
@@ -225,7 +263,8 @@ class aka(znc.Module):
                 ip = re.sub('[^\w.]',".",((re.search(ipv4, str(host))).group(0)))
             elif re.search(ipv6, str(host)) or re.search(rdns, str(host)):
                 ip = str(host)
-            url = 'http://ip-api.com/json/' + ip + '?fields=country,regionName,city,lat,lon,timezone,mobile,proxy,query,reverse,status,message'
+            url = 'http://ip-api.com/json/' + ip + \
+                  '?fields=country,regionName,city,lat,lon,timezone,mobile,proxy,query,reverse,status,message'
             loc = requests.get(url)
             loc_json = loc.json()
 
@@ -234,14 +273,21 @@ class aka(znc.Module):
                     user = "\x02{}\x02 ({}@{})".format(nick.lower(), ident.lower(), host.lower()) 
                 except:
                     user = "\x02{}\x02 (no matching user)".format(user.lower())
-                self.PutModule("{} is located in \x02{}, {}, {}\x02 ({}, {}) / Timezone: {} / Proxy: {} / Mobile: {} / IP: {} / rDNS: {}".format(user, loc_json["city"], loc_json["regionName"], loc_json["country"], loc_json["lat"], loc_json["lon"], loc_json["timezone"], loc_json["proxy"], loc_json["mobile"], loc_json["query"], loc_json["reverse"]))
+                self.PutModule("{} is located in \x02{}, {}, {}\x02 ({}, {}) / Timezone: {} / Proxy: {} / "
+                               "Mobile: {} / IP: {} / rDNS: {}".format(
+                                user, loc_json["city"], loc_json["regionName"], loc_json["country"], loc_json["lat"],
+                                loc_json["lon"], loc_json["timezone"], loc_json["proxy"], loc_json["mobile"],
+                                loc_json["query"], loc_json["reverse"]))
             else:
-                self.PutModule("\x02\x034Unable to geolocate\x03\x02 user \x02{}\x02. (Reason: {})".format(user.lower(), loc_json["message"]))
+                self.PutModule("\x02\x034Unable to geolocate\x03\x02 user \x02{}\x02. (Reason: {})".format(
+                    user.lower(), loc_json["message"]))
         except:
             self.PutModule("\x02\x034No valid host\x03\x02 for user \x02{}\x02".format(user.lower()))
 
     def cmd_stats(self):
-        self.cur.execute("SELECT COUNT(DISTINCT nick), COUNT(DISTINCT ident), COUNT(DISTINCT host), COUNT(DISTINCT channel), COUNT(*) FROM users WHERE network = '{0}';".format(self.GetNetwork().GetName().lower()))
+        self.cur.execute("SELECT COUNT(DISTINCT nick), COUNT(DISTINCT ident), COUNT(DISTINCT host), "
+                         "COUNT(DISTINCT channel), COUNT(*) FROM users WHERE network = '{0}';".format(
+                          self.GetNetwork().GetName().lower()))
         for row in self.cur:
             self.PutModule("\x02Nick(s):\x02 {}".format(row[0]))
             self.PutModule("\x02Ident(s):\x02 {}".format(row[1]))
@@ -262,7 +308,9 @@ class aka(znc.Module):
                 self.PutIRC("WHO %s" % chan.GetName())
         else:
            self.PutIRC("WHO %s" % scope)
-        self.PutModule("{} WHO updates triggered. Please wait several minutes for ZNC to receive the updated data from the IRC server(s) and then run \x02process\x02 to add these updates to the database".format(scope))
+        self.PutModule("{} WHO updates triggered. Please wait several minutes for ZNC to receive "
+                       "the updated data from the IRC server(s) and then run \x02process\x02 to add these "
+                       "updates to the database".format(scope))
 
     def cmd_about(self):
         self.PutModule("\x02aka\x02 (Also Known As / nickhistory) ZNC module by MuffinMedic (Evan)")
@@ -290,7 +338,9 @@ class aka(znc.Module):
     def db_setup(self):
         self.conn = sqlite3.connect(self.GetSavePath() + "/aka.db")
         self.cur = self.conn.cursor()
-        self.cur.execute("create table if not exists users (id INTEGER PRIMARY KEY, network TEXT, nick TEXT, ident TEXT, host TEXT, channel TEXT, message TEXT, time INTEGER, UNIQUE(network, nick, ident, host, channel));")
+        self.cur.execute("create table if not exists users (id INTEGER PRIMARY KEY, network TEXT, nick TEXT, "
+                         "ident TEXT, host TEXT, channel TEXT, message TEXT, time INTEGER, "
+                         "UNIQUE(network, nick, ident, host, channel));")
         self.conn.commit()
 
         if 'HAS_RUN' not in self.nv:
@@ -300,7 +350,8 @@ class aka(znc.Module):
     def migrate(self):
         nets = self.GetUser().GetNetworks()
         for net in nets:
-            path = self.GetUser().GetUserPath() + "/networks/" + net.GetName() + "/moddata/aka/aka." + net.GetName() + ".db"
+            path = self.GetUser().GetUserPath() + "/networks/" + net.GetName() + "/moddata/aka/aka." + \
+                   net.GetName() + ".db"
             if os.path.exists(path):
                 self.old_conn = sqlite3.connect(path)
                 self.old_c = self.old_conn.cursor()
@@ -308,13 +359,28 @@ class aka(znc.Module):
                 data = self.old_c.fetchall()
                 for row in data:
                     if row[5]:
-                        self.cur.execute("INSERT OR IGNORE INTO users (network, nick, ident, host, channel, message, time) VALUES (LOWER(?), LOWER(?), LOWER(?), LOWER(?), LOWER(?), LOWER(?), LOWER(?));", (net.GetName(), row[0], row[1], row[2], row[3], row[4], str(time.mktime((datetime.datetime.strptime(row[5].partition('.')[0], '%Y-%m-%d %H:%M:%S')).timetuple())).partition('.')[0]))
+                        arg = (net.GetName(), row[0], row[1], row[2], row[3], row[4],
+                               str(time.mktime((
+                                   datetime.datetime.strptime(row[5].partition('.')[0], '%Y-%m-%d %H:%M:%S')
+                                    ).timetuple())).partition('.')[0])
+                        self.cur.execute("INSERT OR IGNORE INTO users (network, nick, ident, host, channel, message, "
+                                         "time) VALUES (LOWER(?), LOWER(?), LOWER(?), LOWER(?), LOWER(?), LOWER(?), "
+                                         "LOWER(?));", arg)
                     elif row[6]:
-                        self.cur.execute("INSERT OR IGNORE INTO users (network, nick, ident, host, channel, message, time) VALUES (LOWER(?), LOWER(?), LOWER(?), LOWER(?), LOWER(?), LOWER(?), LOWER(?);", (net.GetName(), row[0], row[1], row[2], row[3], row[4], str(time.mktime((datetime.datetime.strptime(row[6].partition('.')[0], '%Y-%m-%d %H:%M:%S')).timetuple())).partition('.')[0]))
+                        arg = (net.GetName(), row[0], row[1], row[2], row[3], row[4],
+                               str(time.mktime((
+                                datetime.datetime.strptime(row[6].partition('.')[0], '%Y-%m-%d %H:%M:%S')).timetuple()
+                                               )).partition('.')[0])
+                        self.cur.execute("INSERT OR IGNORE INTO users (network, nick, ident, host, channel, message, "
+                                         "time) VALUES (LOWER(?), LOWER(?), LOWER(?), LOWER(?), LOWER(?), LOWER(?), "
+                                         "LOWER(?);", arg)
                     else:
-                        self.cur.execute("INSERT OR IGNORE INTO users (network, nick, ident, host, channel, message) VALUES (LOWER(?), LOWER(?), LOWER(?), LOWER(?), LOWER(?), LOWER(?));", (net.GetName(), row[0], row[1], row[2], row[3], row[4]))
+                        arg = (net.GetName(), row[0], row[1], row[2], row[3], row[4])
+                        self.cur.execute("INSERT OR IGNORE INTO users (network, nick, ident, host, channel, message) "
+                                         "VALUES (LOWER(?), LOWER(?), LOWER(?), LOWER(?), LOWER(?), LOWER(?));", arg)
                 self.conn.commit()
-                os.rename(path, self.GetUser().GetUserPath() + "/networks/" + net.GetName() + "/moddata/aka/aka." + net.GetName() + ".db.old")
+                os.rename(path, self.GetUser().GetUserPath() + "/networks/" + net.GetName() + "/moddata/aka/aka." +
+                          net.GetName() + ".db.old")
 
     def OnModCommand(self, command):
         command = command.lower()
@@ -338,7 +404,7 @@ class aka(znc.Module):
                 self.cmd_history(split_command[1])
             else:
                 self.PutModule("You must specify a user.")
-        elif top_command == "users" or top_command == "channels" or top_command == "sharedchans" or top_command == "sharedusers":
+        elif top_command in ("users", "channels", "sharedchans","sharedusers"):
                 if top_command == 'channels' or top_command == 'sharedchans':
                     if len(split_command) >= 2:
                         self.cmd_channels(split_command[1:])
@@ -404,7 +470,8 @@ class aka(znc.Module):
         help_table.AddRow()
         help_table.SetCell("Command", "channels")
         help_table.SetCell("Arguments", "<user 1> [<user 2>] ... [<user #>]")
-        help_table.SetCell("Description", "Show common channels between a list of user(s) (nicks, idents, or hosts, including mixed)")
+        help_table.SetCell("Description", "Show common channels between a list of user(s) (nicks, idents, or hosts, "
+                                          "including mixed)")
         help_table.AddRow()
         help_table.SetCell("Command", "seen")
         help_table.SetCell("Arguments", "<user> [<#channel>]")
@@ -420,7 +487,8 @@ class aka(znc.Module):
         help_table.AddRow()
         help_table.SetCell("Command", "process")
         help_table.SetCell("Arguments", "<scope>")
-        help_table.SetCell("Description", "Add all current users in the scope (#channel, network, or all) to the database")
+        help_table.SetCell("Description", "Add all current users in the scope (#channel, network, or all) to the "
+                                          "database")
         help_table.AddRow()
         help_table.SetCell("Command", "rawquery")
         help_table.SetCell("Arguments", "<query>")
@@ -437,6 +505,7 @@ class aka(znc.Module):
         help_table.AddRow()
         help_table.SetCell("Command", "NOTE")
         help_table.SetCell("Arguments", "Wildcard Searches")
-        help_table.SetCell("Description", "<user> supports * and ? GLOB wildcard syntax (combinable at start, middle, and end).")
+        help_table.SetCell("Description", "<user> supports * and ? GLOB wildcard syntax (combinable at start, middle, "
+                                          "and end).")
 
         self.PutModule(help_table)
