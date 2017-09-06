@@ -144,9 +144,10 @@ class aka(znc.Module):
         else:
             self.cur.execute("SELECT nick, ident, host, channel, message, MAX(time) FROM (SELECT * from users WHERE message IS NOT NULL) WHERE network = '{0}' AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
         data = self.cur.fetchone()
-        try:
+
+        if len(data) >= 6:
             self.PutModule("\x02{}\x02 ({}@{}) was last seen in \x02{}\x02 at \x02{}\x02 saying \"\x02{}\x02\".".format(data[0], data[1], data[2],data[3], datetime.datetime.fromtimestamp(int(data[5])).strftime('%Y-%m-%d %H:%M:%S'), data[4]))
-        except:
+        else:
             if channel:
                 self.PutModule("\x02{}\x02 has \x02\x034not\x03\x02 been seen in \x02{}\x02.".format(user.lower(), channel.lower()))
             else:
