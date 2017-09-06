@@ -21,7 +21,7 @@
 #  Desc: A ZNC module to track users                                      #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-version = '2.0.3'
+version = '2.0.3.1'
 updated = "October 20, 2016"
 
 import znc
@@ -102,22 +102,28 @@ class aka(znc.Module):
         self.PutModule("Looking up \x02history\x02 for \x02{}\x02, please be patient...".format(user.lower()))
         self.cur.execute("SELECT DISTINCT nick, host FROM users WHERE network = '{0}' AND (nick GLOB '{1}' OR ident GLOB '{1}' OR host GLOB '{1}');".format(self.GetNetwork().GetName().lower(), user.lower()))
         data = self.cur.fetchall()
-        nicks = set(); idents = set(); hosts = set();
+        nicks, idents, hosts = set(), set(), set()
         if len(data) > 0:
             for row in data:
-                nicks.add("nick = '" + row[0] + "' OR"); hosts.add("host = '" + row[1] + "' OR");
+                nicks.add("nick = '" + row[0] + "' OR")
+                hosts.add("host = '" + row[1] + "' OR")
+
             self.cur.execute("SELECT DISTINCT nick, ident, host FROM users WHERE network = '{}' AND ({} {})".format(self.GetNetwork().GetName().lower(), ' '.join(nicks), ' '.join(hosts)[:-3]))
             data = self.cur.fetchall()
-            nicks.clear(); hosts.clear()
+            nicks.clear()
+            hosts.clear()
             for row in data:
-                nicks.add(row[0]); idents.add(row[1]); hosts.add(row[2]);
+                nicks.add(row[0])
+                idents.add(row[1])
+                hosts.add(row[2])
+
             self.display_results(nicks, idents, hosts)
             self.PutModule("History for {} \x02complete\x02.".format(user.lower()))
         else:
             self.PutModule("No history found for \x02{}\x02".format(user.lower()))
 
     def display_results(self, nicks, idents, hosts):
-        nicks = sorted(list(nicks)); idents = sorted(list(idents)); hosts = sorted(list(hosts));
+        nicks, idents, hosts = sorted(list(nicks)), sorted(list(idents)), sorted(list(hosts))
         size = 100
         index = 0
         while(index < len(nicks)):
@@ -169,15 +175,21 @@ class aka(znc.Module):
         self.PutModule("Common \x02channels\x02 for \x02{}:\x02 {}".format(', '.join(users), ', '.join(sorted(shared_chans))))
 
     def cmd_users(self, channels):
-        nick_lists = []; ident_lists = []; host_lists = [];
+        nick_lists, ident_lists, host_lists = [], [], []
         for channel in channels:
-            nicks = []; idents = []; hosts = [];
+            nicks, idents, hosts = [], [], []
             self.cur.execute("SELECT DISTINCT nick, ident, host FROM users WHERE network = '{}' AND channel = '{}';".format(self.GetNetwork().GetName().lower(), channel.lower()))
             data = self.cur.fetchall()
             for row in data:
-                nicks.append(row[0]); idents.append(row[1]); hosts.append(row[2]);
-            nick_lists.append(nicks); ident_lists.append(idents); host_lists.append(hosts);
-        shared_nicks = set(nick_lists[0]); shared_idents = set(ident_lists[0]); shared_hosts = set(host_lists[0]);
+                nicks.append(row[0])
+                idents.append(row[1])
+                hosts.append(row[2])
+
+            nick_lists.append(nicks)
+            ident_lists.append(idents)
+            host_lists.append(hosts)
+
+        shared_nicks, shared_idents, shared_hosts = set(nick_lists[0]), set(ident_lists[0]), set(host_lists[0])
         for nick in nick_lists[1:]:
             shared_nicks.intersection_update(nick)
         for ident in ident_lists[1:]:
