@@ -22,7 +22,7 @@
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 version = '2.0.3.1'
-updated = "October 20, 2016"
+updated = "September 6, 2017"
 
 import znc
 import os
