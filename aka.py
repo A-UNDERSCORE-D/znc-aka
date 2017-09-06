@@ -317,66 +317,69 @@ class aka(znc.Module):
 
     def OnModCommand(self, command):
         command = command.lower()
-        cmds = ["all", "history", "users", "channels", "sharedchans", "sharedusers", "seen", "geo", "process", "who", "rawquery", "stats", "about", "help", "migrate"]
-        if command.split()[0] in cmds:
-            if command.split()[0] == "all":
-                try:
-                    self.PutModule("Getting \x02all\x02 for \x02{}\x02.".format(command.split()[1]))
-                    self.cmd_history(command.split()[1])
-                    self.cmd_channels(command.split()[1:])
-                    self.cmd_seen(command.split()[1], None)
-                    self.cmd_geo(command.split()[1])
-                    self.PutModule("All \x02complete\x02.")
-                except:
-                    self.PutModule("You must specify a user.")
-            elif command.split()[0] == "history":
-                try:
-                    self.cmd_history(command.split()[1])
-                except:
-                    self.PutModule("You must specify a user.")
-            elif command.split()[0] == "users" or command.split()[0] == "channels" or command.split()[0] == "sharedchans" or command.split()[0] == "sharedusers":
-                    if command.split()[0] == 'channels' or command.split()[0] == 'sharedchans':
-                        try:
-                            self.cmd_channels(command.split()[1:])
-                        except:
-                            self.PutModule("You must specify at least one user.")
-                    elif command.split()[0] == 'users' or command.split()[0] == 'sharedusers':
-                        try:
-                            self.cmd_users(command.split()[1:])
-                        except:
-                            self.PutModule("You must specify at least one channel.")
-            elif command.split()[0] == "seen":
-                try:
+        # cmds = ["all", "history", "users", "channels", "sharedchans", "sharedusers", "seen", "geo", "process",
+        # "who", "rawquery", "stats", "about", "help", "migrate"]
+
+        split_command = command.split()
+        top_command = split_command[0]
+        if top_command == "all":
+            try:
+                self.PutModule("Getting \x02all\x02 for \x02{}\x02.".format(split_command[1]))
+                self.cmd_history(split_command[1])
+                self.cmd_channels(split_command[1:])
+                self.cmd_seen(split_command[1], None)
+                self.cmd_geo(split_command[1])
+                self.PutModule("All \x02complete\x02.")
+            except:
+                self.PutModule("You must specify a user.")
+        elif top_command == "history":
+            try:
+                self.cmd_history(split_command[1])
+            except:
+                self.PutModule("You must specify a user.")
+        elif top_command == "users" or top_command == "channels" or top_command == "sharedchans" or top_command == "sharedusers":
+                if top_command == 'channels' or top_command == 'sharedchans':
                     try:
-                        self.cmd_seen(command.split()[1], command.split()[2])
+                        self.cmd_channels(split_command[1:])
                     except:
-                        self.cmd_seen(command.split()[1], None)
-                except:
-                    self.PutModule("You must specify a user and optional channel.")
-            elif command.split()[0] == "geo":
+                        self.PutModule("You must specify at least one user.")
+                elif top_command == 'users' or top_command == 'sharedusers':
+                    try:
+                        self.cmd_users(split_command[1:])
+                    except:
+                        self.PutModule("You must specify at least one channel.")
+        elif top_command == "seen":
+            try:
                 try:
-                    self.cmd_geo(command.split()[1])
+                    self.cmd_seen(split_command[1], split_command[2])
                 except:
-                    self.PutModule("You must specify a user.")
-            elif command.split()[0] == "process" or command.split()[0] == "who":
-                try:
-                    if command.split()[0] == "process":
-                        self.cmd_process(command.split()[1])
-                    elif command.split()[0] == "who":
-                        self.cmd_who(command.split()[1])
-                except:
-                    self.PutModule("Valid options: #channel, network, all")
-            elif command.split()[0] == "rawquery":
-                try:
-                    self.cmd_rawquery(command.split()[1:])
-                except:
-                    self.PutModule("You must specify a query.")
-            elif command.split()[0] == "stats":
-                self.cmd_stats()
-            elif command.split()[0] == "about":
-                self.cmd_about()
-            elif command.split()[0] == "help":
-                self.cmd_help()
+                    self.cmd_seen(split_command[1], None)
+            except:
+                self.PutModule("You must specify a user and optional channel.")
+        elif top_command == "geo":
+            try:
+                self.cmd_geo(split_command[1])
+            except:
+                self.PutModule("You must specify a user.")
+        elif top_command == "process" or top_command == "who":
+            try:
+                if top_command == "process":
+                    self.cmd_process(split_command[1])
+                elif top_command == "who":
+                    self.cmd_who(split_command[1])
+            except:
+                self.PutModule("Valid options: #channel, network, all")
+        elif top_command == "rawquery":
+            try:
+                self.cmd_rawquery(split_command[1:])
+            except:
+                self.PutModule("You must specify a query.")
+        elif top_command == "stats":
+            self.cmd_stats()
+        elif top_command == "about":
+            self.cmd_about()
+        elif top_command == "help":
+            self.cmd_help()
         else:
             self.PutModule("Invalid command. See \x02help\x02 for a list of available commands.")
 
