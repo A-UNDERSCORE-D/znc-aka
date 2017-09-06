@@ -323,56 +323,56 @@ class aka(znc.Module):
         split_command = command.split()
         top_command = split_command[0]
         if top_command == "all":
-            try:
+            if len(split_command) >= 2:
                 self.PutModule("Getting \x02all\x02 for \x02{}\x02.".format(split_command[1]))
                 self.cmd_history(split_command[1])
                 self.cmd_channels(split_command[1:])
                 self.cmd_seen(split_command[1], None)
                 self.cmd_geo(split_command[1])
                 self.PutModule("All \x02complete\x02.")
-            except:
+            else:
                 self.PutModule("You must specify a user.")
         elif top_command == "history":
-            try:
+            if len(split_command) >= 2:
                 self.cmd_history(split_command[1])
-            except:
+            else:
                 self.PutModule("You must specify a user.")
         elif top_command == "users" or top_command == "channels" or top_command == "sharedchans" or top_command == "sharedusers":
                 if top_command == 'channels' or top_command == 'sharedchans':
-                    try:
+                    if len(split_command) >= 2:
                         self.cmd_channels(split_command[1:])
-                    except:
+                    else:
                         self.PutModule("You must specify at least one user.")
                 elif top_command == 'users' or top_command == 'sharedusers':
-                    try:
+                    if len(split_command) >= 2:
                         self.cmd_users(split_command[1:])
-                    except:
+                    else:
                         self.PutModule("You must specify at least one channel.")
         elif top_command == "seen":
-            try:
-                try:
+            if len(split_command) >= 2:
+                if len(split_command) >= 3:
                     self.cmd_seen(split_command[1], split_command[2])
-                except:
+                else:
                     self.cmd_seen(split_command[1], None)
-            except:
+            else:
                 self.PutModule("You must specify a user and optional channel.")
         elif top_command == "geo":
-            try:
+            if len(split_command) >= 2:
                 self.cmd_geo(split_command[1])
-            except:
+            else:
                 self.PutModule("You must specify a user.")
         elif top_command == "process" or top_command == "who":
-            try:
+            if len(split_command) >= 2:
                 if top_command == "process":
                     self.cmd_process(split_command[1])
                 elif top_command == "who":
                     self.cmd_who(split_command[1])
-            except:
+            else:
                 self.PutModule("Valid options: #channel, network, all")
         elif top_command == "rawquery":
-            try:
+            if len(split_command) >= 2:
                 self.cmd_rawquery(split_command[1:])
-            except:
+            else:
                 self.PutModule("You must specify a query.")
         elif top_command == "stats":
             self.cmd_stats()
